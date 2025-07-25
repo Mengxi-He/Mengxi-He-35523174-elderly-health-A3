@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "title": "Tai Chi in the Park",
+    "date": "2025-08-01",
+    "location": "Central Park",
+    "description": "Morning exercise for elderly people.",
+    "scores": [],
+    "ratingsByUser": {}
+  },
+  {
+    "id": 2,
+    "title": "Health Lecture",
+    "date": "2025-08-05",
+    "location": "Community Hall",
+    "description": "Tips on healthy aging.",
+    "scores": [],
+    "ratingsByUser": {}
+  }
+]
