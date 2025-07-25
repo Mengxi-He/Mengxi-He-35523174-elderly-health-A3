@@ -136,8 +136,18 @@ function validateEmail(blur) {
 
 function validateUsername(blur) {
   const name = formData.value.username
-  errors.value.username = name.length < 3 && blur ? 'Username must be at least 3 characters.' : null
+  const validLength = name.length >= 3 && name.length <= 20
+  const validFormat = /^[a-zA-Z0-9_]+$/.test(name)
+
+  if (!validLength && blur) {
+    errors.value.username = 'Username must be 3–20 characters long.'
+  } else if (!validFormat && blur) {
+    errors.value.username = 'Only letters, numbers and underscores allowed.'
+  } else {
+    errors.value.username = null
+  }
 }
+
 
 function validatePassword(blur) {
   const pwd = formData.value.password

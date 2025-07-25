@@ -1,28 +1,68 @@
 <template>
-  <div class="container mt-5">
-    <h2 class="mb-4 text-center">🎯 Upcoming Activities for Elders</h2>
+  <div class="container-fluid mt-4">
+    <div class="row">
+      <!-- 侧边栏 -->
+      <div class="col-md-3">
+        <div class="list-group">
+          <button class="list-group-item list-group-item-action"
+                  :class="{ active: activeTab === 'rate' }"
+                  @click="activeTab = 'rate'">
+            🌟 Interested activities
+          </button>
+          <button class="list-group-item list-group-item-action"
+                  :class="{ active: activeTab === 'register' }"
+                  @click="activeTab = 'register'">
+            📋 Activities available for registration
+          </button>
+        </div>
+      </div>
 
-    <div v-for="activity in activities" :key="activity.id" class="card mb-4 shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title">{{ activity.title }}</h5>
-        <p class="card-text">
-          📅 {{ activity.date }} | 📍 {{ activity.location }}<br />
-          {{ activity.description }}
-        </p>
+      <!-- 内容区域 -->
+      <div class="col-md-9">
+        <h3 class="mb-4 text-center">
+          {{ activeTab === 'rate' ? '🎯 Activities to Rate' : '📝 Activities to Register' }}
+        </h3>
 
-        <!-- 评分区域 -->
-        <div v-if="!hasRated(activity)" class="rating-input">
-          <label for="rating">Your expectation (1–5):</label>
-          <select v-model="ratings[activity.id]" class="form-select w-auto d-inline-block mx-2">
-            <option disabled value="">Select</option>
-            <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
-          </select>
-          <button class="btn btn-primary btn-sm" @click="submitRating(activity)">Submit</button>
+        <div v-if="activeTab === 'rate'">
+          <div v-for="activity in activities" :key="activity.id" class="card mb-3">
+            <div class="card-body">
+              <h5>{{ activity.title }}</h5>
+              <p>
+                📅 {{ activity.date }} | 🕒 {{ activity.time }} <br>
+                📍 {{ activity.location }}<br>
+                {{ activity.description }}
+              </p>
+
+              <div v-if="!hasRated(activity)">
+                <label>Your expectation (1–5):</label>
+                <select v-model="ratings[activity.id]" class="form-select d-inline-block w-auto mx-2">
+                  <option disabled value="">Select</option>
+                  <option v-for="n in 5" :key="n" :value="n">{{ n }}</option>
+                </select>
+                <button class="btn btn-sm btn-primary" @click="submitRating(activity)">Submit</button>
+              </div>
+              <div v-else class="mt-2">
+                <strong>⭐ Avg. Expectation:</strong> {{ calculateAverage(activity) }}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- 平均评分展示 -->
-        <div v-else class="mt-2">
-          <strong>⭐ Average Expectation:</strong> {{ calculateAverage(activity) }}
+        <div v-else>
+          <div v-for="activity in availableActivities" :key="activity.id" class="form-check mb-3 border p-3 rounded">
+            <input type="checkbox" class="form-check-input"
+                   :id="'activity-' + activity.id"
+                   :value="activity.id"
+                   v-model="selectedActivities"
+                   :disabled="checkTimeConflict(activity)">
+            <label :for="'activity-' + activity.id" class="form-check-label">
+              <strong>{{ activity.title }}</strong> <br>
+              📅 {{ activity.date }} | 🕒 {{ activity.time }} | 📍 {{ activity.location }}<br>
+              <small>{{ activity.description }}</small>
+              <div v-if="checkTimeConflict(activity)" class="text-danger mt-1">⚠️ Time conflict!</div>
+            </label>
+          </div>
+          <button class="btn btn-success mt-3" @click="registerActivities">Register Selected</button>
         </div>
       </div>
     </div>
@@ -30,19 +70,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
-// 当前登录用户
 const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}')
 const username = currentUser?.username || ''
 
-// 当前所有活动
 const activities = ref([])
-
-// 当前评分输入
 const ratings = ref({})
+const selectedActivities = ref([])
+const activeTab = ref('rate')
 
-// 初始化活动数据
+// 加载活动数据
 onMounted(async () => {
   const cached = localStorage.getItem('activities')
   if (cached) {
@@ -55,7 +93,7 @@ onMounted(async () => {
   }
 })
 
-// 检查是否已评分
+// 判断是否已评分
 function hasRated(activity) {
   return activity.ratingsByUser && activity.ratingsByUser[username] !== undefined
 }
@@ -64,28 +102,60 @@ function hasRated(activity) {
 function submitRating(activity) {
   const score = parseInt(ratings.value[activity.id])
   if (!score || score < 1 || score > 5) return
+  if (!activity.ratingsByUser) activity.ratingsByUser = {}
+  if (!activity.scores) activity.scores = []
 
   activity.ratingsByUser[username] = score
   activity.scores.push(score)
-
-  // 更新 localStorage
   localStorage.setItem('activities', JSON.stringify(activities.value))
 }
 
-// 计算平均分
+// 平均分
 function calculateAverage(activity) {
-  if (!activity.scores.length) return 'N/A'
+  if (!activity.scores?.length) return 'N/A'
   const total = activity.scores.reduce((a, b) => a + b, 0)
   return (total / activity.scores.length).toFixed(1)
+}
+
+// 过滤出当前可报名活动
+const availableActivities = computed(() =>
+  activities.value.filter(a => !a.registeredUsers?.includes(username))
+)
+
+// 时间冲突检测
+function checkTimeConflict(activity) {
+  const userEvents = activities.value.filter(a => a.registeredUsers?.includes(username))
+  return userEvents.some(
+    e => e.date === activity.date && e.time === activity.time
+  )
+}
+
+// 报名所选活动
+function registerActivities() {
+  activities.value.forEach(activity => {
+    if (selectedActivities.value.includes(activity.id)) {
+      if (!activity.registeredUsers) activity.registeredUsers = []
+      if (!activity.registeredUsers.includes(username)) {
+        activity.registeredUsers.push(username)
+      }
+    }
+  })
+  localStorage.setItem('activities', JSON.stringify(activities.value))
+  selectedActivities.value = []
+  alert('Successfully registered!')
 }
 </script>
 
 <style scoped>
 .card {
-  border-radius: 12px;
-  border: 1px solid #ccc;
+  border-radius: 10px;
 }
-.rating-input select {
-  width: 80px;
+.list-group-item {
+  cursor: pointer;
+}
+.list-group-item.active {
+  background-color: #0d6efd;
+  color: white;
+  border-color: #0d6efd;
 }
 </style>

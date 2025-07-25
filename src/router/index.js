@@ -32,31 +32,37 @@ const routes = [
     path: '/about',
     name: 'About',
     component: AboutView,
-    //meta: { requiresAuth: true }
+
   },
   {
     path: '/account-elder',
-    component: ElderAccountView
+    component: ElderAccountView,
+    meta: { requiresAuth: true, role: 'elder' }
   },
   {
     path: '/free-help',
-    component: FreeHelpView
+    component: FreeHelpView,
+    meta: { requiresAuth: true, role: 'elder' }
   },
   {
     path: '/recent-activities',
-    component: RecentActivitiesView
+    component: RecentActivitiesView,
+    meta: { requiresAuth: true, role: 'elder' }
   },
   {
     path: '/account-volunteer',
-    component: VolunteerAccountView
+    component: VolunteerAccountView,
+    meta: { requiresAuth: true, role: 'volunteer' }
   },
   {
     path: '/volunteer-area',
-    component: VolunteerAreaView
+    component: VolunteerAreaView,
+    meta: { requiresAuth: true, role: 'volunteer' }
   },
   {
     path: '/admin-panel',
-    component: AdminPanelView
+    component: AdminPanelView,
+    meta: { requiresAuth: true, role: 'admin' }
   }
 
 ]
@@ -69,12 +75,21 @@ const router = createRouter({
 // 路由导航守卫
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
+  const currentUser = JSON.parse(localStorage.getItem('currentUser'))
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else {
-    next()
+  if (to.meta.requiresAuth) {
+    if (!isAuthenticated || !currentUser) {
+      return next('/login') // 未登录
+    }
+
+    // 检查角色是否匹配
+    if (to.meta.role && currentUser.role !== to.meta.role) {
+      return next('/') // 登录但角色不匹配，跳首页
+    }
   }
+
+  next()
 })
+
 
 export default router

@@ -1,20 +1,47 @@
 [
   {
     "id": 1,
-    "title": "Tai Chi in the Park",
-    "date": "2025-08-01",
-    "location": "Central Park",
-    "description": "Morning exercise for elderly people.",
+    "title": "Gentle Yoga Class",
+    "description": "A relaxing yoga session designed for seniors.",
+    "date": "2025-08-15",
+    "time": "10:00",
+    "location": "Community Center A",
+    "ratingsByUser": {},
     "scores": [],
-    "ratingsByUser": {}
+    "registeredUsers": []
   },
   {
     "id": 2,
-    "title": "Health Lecture",
-    "date": "2025-08-05",
-    "location": "Community Hall",
-    "description": "Tips on healthy aging.",
+    "title": "Health Talk: Heart Wellness",
+    "description": "A free talk by a cardiologist about senior heart health.",
+    "date": "2025-08-16",
+    "time": "14:00",
+    "location": "Health Room B",
+    "ratingsByUser": {},
     "scores": [],
-    "ratingsByUser": {}
+    "registeredUsers": []
+  },
+  {
+    "id": 3,
+    "title": "Handcraft Workshop",
+    "description": "Enjoy a fun and creative afternoon making crafts.",
+    "date": "2025-08-17",
+    "time": "13:30",
+    "location": "Art Room C",
+    "ratingsByUser": {},
+    "scores": [],
+    "registeredUsers": []
+  },
+  {
+    "id": 4,
+    "title": "Memory Boosting Game Time",
+    "description": "Cognitive games to stimulate memory and logic.",
+    "date": "2025-08-18",
+    "time": "15:00",
+    "location": "Room D2",
+    "ratingsByUser": {},
+    "scores": [],
+    "registeredUsers": []
   }
 ]
+
