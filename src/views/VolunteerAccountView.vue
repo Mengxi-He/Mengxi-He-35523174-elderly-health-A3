@@ -37,6 +37,16 @@
           <p><strong>Role:</strong> {{ user.role }}</p>
         </div>
 
+      <div v-if="currentTab === 'activities'">
+        <h4>🙋 My Joined Volunteer Activities</h4>
+        <p v-if="activities.length === 0" class="text-muted">No joined volunteer activity records yet.</p>
+        <ul class="list-group" v-else>
+          <li class="list-group-item" v-for="(a, index) in activities" :key="index">
+            {{ a.title }} — {{ a.date }} at {{ a.location }}
+          </li>
+        </ul>
+      </div>
+
         <div v-if="currentTab === 'settings'">
           <h4>⚙️ Account Settings</h4>
 
@@ -94,7 +104,27 @@ function validatePasswordFormat(password) {
   )
 }
 
+onMounted(async () => {
+ const stored = JSON.parse(localStorage.getItem('currentUser'))
+ if (stored) {
+  user.value = stored
+ }
 
+ // Load volunteer activity data
+ let allVolunteerActivities = []
+ const cached = localStorage.getItem('volunteer_activities')
+ if (cached) {
+  allVolunteerActivities = JSON.parse(cached)
+ } else {
+  const res = await fetch('/src/assets/json/volunteer_activities.json')
+  allVolunteerActivities = await res.json()
+  localStorage.setItem('volunteer_activities', JSON.stringify(allVolunteerActivities))
+ }
+
+ activities.value = allVolunteerActivities.filter(
+  a => a.registeredUsers && a.registeredUsers.includes(user.value.username)
+ )
+})
 
 function updateSettings() {
   const users = JSON.parse(localStorage.getItem('users') || '[]')
