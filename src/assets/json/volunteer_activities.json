@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "title": "Elderly Care Visit",
+    "date": "2025-08-01",
+    "time": "10:00",
+    "location": "Sunshine Nursing Home",
+    "capacity": 3,
+    "registeredUsers": []
+  },
+  {
+    "id": 2,
+    "title": "Community Health Service",
+    "date": "2025-08-01",
+    "time": "14:00",
+    "location": "Local Health Center",
+    "capacity": 2,
+    "registeredUsers": []
+  },
+  {
+    "id": 3,
+    "title": "Remote Mental Support Call",
+    "date": "2025-08-03",
+    "time": "09:00",
+    "location": "Online",
+    "capacity": 5,
+    "registeredUsers": []
+  }
+]
