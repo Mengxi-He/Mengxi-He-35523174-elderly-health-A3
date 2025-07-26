@@ -82,8 +82,11 @@
           </div>
 
           <button class="btn btn-primary" @click="updateSettings">Update</button>
+          
+          <p class="text-muted mt-2">Note: You will be logged out after updating.</p>
+          <p class="text-danger mt-2" v-if="updateMessage && !updateSuccess">{{ updateMessage }}</p>
+          <p class="text-success mt-2" v-if="updateMessage && updateSuccess">{{ updateMessage }}</p>
 
-          <p class="text-success mt-3" v-if="updateSuccess">{{ updateMessage }}</p>
         </div>
 
       </div>
@@ -103,7 +106,29 @@ const user = ref({
 
 const activities = ref([])
 const equipments = ref([])
+
+// 设置项字段
+const newEmail = ref('')
+const newPassword = ref('')
 const updateMessage = ref('')
+const updateSuccess = ref(false)
+
+// 验证函数
+function validateEmailFormat(email) {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return regex.test(email)
+}
+
+function validatePasswordFormat(password) {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /\d/.test(password) &&
+    /[!@#$%^&*]/.test(password)
+  )
+}
+
 onMounted(() => {
   const stored = JSON.parse(localStorage.getItem('currentUser'))
   if (stored) {
@@ -116,61 +141,62 @@ onMounted(() => {
     act => act.registeredUsers && act.registeredUsers.includes(user.value.username)
   )
 
-  // 保留借设备记录的假数据
+  // 假设设备数据（测试）
   equipments.value = [
     { name: 'Walker', date: '2025-06-28' },
     { name: 'Blood Pressure Monitor', date: '2025-07-02' }
   ]
 })
 
-const newEmail = ref('')
-const newPassword = ref('')
-const updateSuccess = ref(false)
-
 function updateSettings() {
   const users = JSON.parse(localStorage.getItem('users') || '[]')
   const current = JSON.parse(localStorage.getItem('currentUser'))
 
   const index = users.findIndex((u) => u.username === current.username)
-  if (index !== -1) {
-    const trimmedEmail = newEmail.value.trim()
-    const trimmedPassword = newPassword.value.trim()
+  if (index === -1) return
 
-    const emailChanged = trimmedEmail && trimmedEmail !== users[index].email
-    const passwordChanged = trimmedPassword && trimmedPassword !== users[index].password
+  const trimmedEmail = newEmail.value.trim()
+  const trimmedPassword = newPassword.value.trim()
 
-    if (!emailChanged && !passwordChanged) {
-      updateSuccess.value = true
-      updateMessage.value = 'Change nothing'
-      setTimeout(() => {
-        updateSuccess.value = false
-        updateMessage.value = ''
-      }, 3000)
-      return
-    }
+  const emailChanged = trimmedEmail && trimmedEmail !== users[index].email
+  const passwordChanged = trimmedPassword && trimmedPassword !== users[index].password
 
-    const confirmUpdate = confirm('Email or password has changed. Do you want to proceed and log out?')
-    if (!confirmUpdate) return
-
-    // 应用更改
-    if (emailChanged) users[index].email = trimmedEmail
-    if (passwordChanged) users[index].password = trimmedPassword
-
-    localStorage.setItem('users', JSON.stringify(users))
-
-    // 清除登录状态并跳转
-    localStorage.removeItem('currentUser')
-    localStorage.setItem('isAuthenticated', 'false')
-    window.location.href = '/login'
+  // ✅ 未改任何内容
+  if (!emailChanged && !passwordChanged) {
+    updateSuccess.value = false
+    updateMessage.value = '❗ You changed nothing.'
+    return
   }
 
-  newEmail.value = ''
-  newPassword.value = ''
+  // ❌ 校验失败
+  if (emailChanged && !validateEmailFormat(trimmedEmail)) {
+    updateSuccess.value = false
+    updateMessage.value = '❌ Invalid email format.'
+    return
+  }
+  if (passwordChanged && !validatePasswordFormat(trimmedPassword)) {
+    updateSuccess.value = false
+    updateMessage.value = '❌ Password must be 8+ chars, include upper/lowercase, number, special char.'
+    return
+  }
+
+  // ✅ 确认更改
+  if (!confirm('Are you sure you want to update? You will be logged out.')) return
+
+  if (emailChanged) users[index].email = trimmedEmail
+  if (passwordChanged) users[index].password = trimmedPassword
+  localStorage.setItem('users', JSON.stringify(users))
+
+  localStorage.removeItem('currentUser')
+  localStorage.setItem('isAuthenticated', 'false')
+  alert('✅ Info updated. Please log in again.')
+
+  // 清除并跳转
+  window.location.href = '/login'
 }
 
-
-
 </script>
+
 
 <style scoped>
 .list-group-item {
