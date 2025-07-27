@@ -2,7 +2,7 @@
   <div class="container">
     <header class="d-flex justify-content-center py-3">
       <ul class="nav nav-pills">
-        <!-- 所有用户都能看到 -->
+        <!-- All users can view. -->
         <li class="nav-item">
           <router-link to="/" class="nav-link" active-class="active">Home</router-link>
         </li>
@@ -10,7 +10,7 @@
           <router-link to="/about" class="nav-link" active-class="active">About</router-link>
         </li>
 
-        <!-- 👵 Elder 登录后显示 -->
+        <!--  After logging in, Elder displays -->
         <template v-if="loggedIn && userRole === 'elder'">
           <li class="nav-item">
             <router-link to="/account-elder" class="nav-link" active-class="active">Account</router-link>
@@ -23,7 +23,7 @@
           </li>
         </template>
 
-        <!-- 🙋 Volunteer 登录后显示 -->
+        <!--  After logging in, Volunteer displays -->
         <template v-if="loggedIn && userRole === 'volunteer'">
           <li class="nav-item">
             <router-link to="/account-volunteer" class="nav-link" active-class="active">Account</router-link>
@@ -33,7 +33,7 @@
           </li>
         </template>
 
-        <!-- 🛠️ Admin 登录后显示 -->
+        <!--  After logging in, Admin displays -->
         <template v-if="loggedIn && userRole === 'admin'">
           <li class="nav-item">
             <router-link to="/admin-panel" class="nav-link" active-class="active">Admin Panel</router-link>
@@ -41,7 +41,7 @@
         </template>
       </ul>
 
-      <!-- 登录 / 登出按钮 -->
+      <!-- Login / Logout button -->
       <div class="ms-3">
         <router-link v-if="!loggedIn" to="/login" class="btn btn-outline-primary btn-sm">Login</router-link>
         <button v-else @click="logout" class="btn btn-outline-danger btn-sm">Logout</button>
@@ -59,11 +59,11 @@ const userRole = ref('')
 const router = useRouter()
 const route = useRoute()
 
-// 初始挂载时读取登录角色
+// Initial mount to read login role
 const user = JSON.parse(localStorage.getItem('currentUser'))
 userRole.value = user?.role || ''
 
-// 每次路由变化都检查登录状态和角色
+// Watch for route changes to check login status and role
 watch(
   () => route.fullPath,
   () => {

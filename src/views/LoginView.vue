@@ -3,7 +3,7 @@
     <h2 class="text-center mb-4">Sign in to Health Charity</h2>
 
     <form @submit.prevent="handleLogin">
-      <!-- 用户名或邮箱输入框 -->
+      <!-- Username or Email Input Box -->
       <div class="mb-3">
         <label>Email or Username:</label>
         <input
@@ -15,7 +15,7 @@
         />
       </div>
 
-      <!-- 密码输入框 -->
+      <!-- Password Input Box -->
       <div class="mb-3">
         <label>Password:</label>
         <input
@@ -27,19 +27,19 @@
         />
       </div>
 
-      <!-- 登录按钮 -->
+      <!-- Login Button -->
       <button type="submit" class="btn btn-success w-100">Sign in</button>
 
-      <!-- 错误提示 -->
+      <!-- Error Message -->
       <p v-if="error" class="text-danger mt-2 text-center">
         Invalid credentials or user not found
       </p>
     </form>
 
-    <!-- 分隔线 -->
+    <!-- Divider -->
     <hr />
 
-    <!-- 注册跳转 -->
+    <!-- Registration Redirect -->
     <p class="text-center">
       New to the system?
       <a href="#" @click.prevent="goToRegister">Create an account</a>
@@ -59,7 +59,7 @@ const router = useRouter()
 function handleLogin() {
   const users = JSON.parse(localStorage.getItem('users') || '[]')
 
-  // 匹配用户名或邮箱
+  // Match username or email
   const user = users.find(
     (u) =>
       (u.username === identifier.value || u.email === identifier.value) &&
@@ -67,18 +67,18 @@ function handleLogin() {
   )
 
   if (user) {
-    // 保存登录状态
+    // Save login state
     localStorage.setItem('isAuthenticated', 'true')
     localStorage.setItem('currentUser', JSON.stringify(user))
     error.value = false
 
-    // 根据角色跳转
+    // Redirect based on role
     if (user.role === 'admin') {
-      router.push('/admin')
+      router.push('/admin-panel')
     } else if (user.role === 'elder') {
       router.push('/account-elder')
     } else if (user.role === 'volunteer') {
-      router.push('/volunteer')
+      router.push('/volunteer-area')
     } else {
       router.push('/')
     }

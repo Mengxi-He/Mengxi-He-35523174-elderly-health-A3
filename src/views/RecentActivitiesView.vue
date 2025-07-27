@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid mt-4">
     <div class="row">
-      <!-- 侧边栏 -->
+      <!-- left sidebar -->
       <div class="col-md-3">
         <div class="list-group">
           <button class="list-group-item list-group-item-action"
@@ -17,7 +17,7 @@
         </div>
       </div>
 
-      <!-- 内容区域 -->
+      <!-- Content Area -->
       <div class="col-md-9">
         <h3 class="mb-4 text-center">
           {{ activeTab === 'rate' ? '🎯 Activities to Rate' : '📝 Activities to Register' }}
@@ -80,7 +80,7 @@ const ratings = ref({})
 const selectedActivities = ref([])
 const activeTab = ref('rate')
 
-// 加载活动数据
+// Load activity data
 onMounted(async () => {
   const cached = localStorage.getItem('activities')
   if (cached) {
@@ -93,12 +93,12 @@ onMounted(async () => {
   }
 })
 
-// 判断是否已评分
+// Check if already rated
 function hasRated(activity) {
   return activity.ratingsByUser && activity.ratingsByUser[username] !== undefined
 }
 
-// 提交评分
+// Submit rating
 function submitRating(activity) {
   const score = parseInt(ratings.value[activity.id])
   if (!score || score < 1 || score > 5) return
@@ -110,19 +110,19 @@ function submitRating(activity) {
   localStorage.setItem('activities', JSON.stringify(activities.value))
 }
 
-// 平均分
+// Calculate average rating
 function calculateAverage(activity) {
   if (!activity.scores?.length) return 'N/A'
   const total = activity.scores.reduce((a, b) => a + b, 0)
   return (total / activity.scores.length).toFixed(1)
 }
 
-// 过滤出当前可报名活动
+// Filter available activities for registration
 const availableActivities = computed(() =>
   activities.value.filter(a => !a.registeredUsers?.includes(username))
 )
 
-// 时间冲突检测
+// Time conflict detection
 function checkTimeConflict(activity) {
   const userEvents = activities.value.filter(a => a.registeredUsers?.includes(username))
   return userEvents.some(
@@ -130,7 +130,7 @@ function checkTimeConflict(activity) {
   )
 }
 
-// 报名所选活动
+// Register selected activities
 function registerActivities() {
   activities.value.forEach(activity => {
     if (selectedActivities.value.includes(activity.id)) {

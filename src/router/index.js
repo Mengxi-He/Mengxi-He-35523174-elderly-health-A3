@@ -19,7 +19,7 @@ const routes = [
     component: LoginView
   },
   {
-    path: '/register', // 注册页面路径
+    path: '/register', 
     name: 'Register',
     component: RegisterView
   },
@@ -72,19 +72,19 @@ const router = createRouter({
   routes
 })
 
-// 路由导航守卫
+// Routing navigation guard
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true'
   const currentUser = JSON.parse(localStorage.getItem('currentUser'))
 
   if (to.meta.requiresAuth) {
     if (!isAuthenticated || !currentUser) {
-      return next('/login') // 未登录
+      return next('/login') // Not logged in
     }
 
-    // 检查角色是否匹配
+    // Check role
     if (to.meta.role && currentUser.role !== to.meta.role) {
-      return next('/') // 登录但角色不匹配，跳首页
+      return next('/') // Logged in but role mismatch, redirect to home
     }
   }
 

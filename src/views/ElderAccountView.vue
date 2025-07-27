@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid mt-4">
     <div class="row">
-      <!-- 左侧边栏 -->
+      <!-- Left sidebar -->
       <div class="col-md-3 mb-3">
         <div class="list-group">
           <button
@@ -38,7 +38,7 @@
         </div>
       </div>
 
-      <!-- 右侧内容展示区 -->
+      <!-- Right content display area -->
       <div class="col-md-9">
         <div v-if="currentTab === 'profile'">
           <h4>👤 Personal Information</h4>
@@ -107,13 +107,13 @@ const user = ref({
 const activities = ref([])
 const equipments = ref([])
 
-// 设置项字段
+// Set fields
 const newEmail = ref('')
 const newPassword = ref('')
 const updateMessage = ref('')
 const updateSuccess = ref(false)
 
-// 验证函数
+// Validation functions
 function validateEmailFormat(email) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return regex.test(email)
@@ -135,13 +135,13 @@ onMounted(() => {
     user.value = stored
   }
 
-  // 获取当前用户报名的活动
+  // Get activities registered by the current user
   const allActivities = JSON.parse(localStorage.getItem('activities') || '[]')
   activities.value = allActivities.filter(
     act => act.registeredUsers && act.registeredUsers.includes(user.value.username)
   )
 
-  // 假设设备数据（测试）
+  // Mock equipment data (for testing)
   equipments.value = [
     { name: 'Walker', date: '2025-06-28' },
     { name: 'Blood Pressure Monitor', date: '2025-07-02' }
@@ -161,14 +161,14 @@ function updateSettings() {
   const emailChanged = trimmedEmail && trimmedEmail !== users[index].email
   const passwordChanged = trimmedPassword && trimmedPassword !== users[index].password
 
-  // ✅ 未改任何内容
+  // No changes made
   if (!emailChanged && !passwordChanged) {
     updateSuccess.value = false
     updateMessage.value = '❗ You changed nothing.'
     return
   }
 
-  // ❌ 校验失败
+  // Validation failed
   if (emailChanged && !validateEmailFormat(trimmedEmail)) {
     updateSuccess.value = false
     updateMessage.value = '❌ Invalid email format.'
@@ -180,7 +180,7 @@ function updateSettings() {
     return
   }
 
-  // ✅ 确认更改
+  // Confirm changes
   if (!confirm('Are you sure you want to update? You will be logged out.')) return
 
   if (emailChanged) users[index].email = trimmedEmail
@@ -191,7 +191,7 @@ function updateSettings() {
   localStorage.setItem('isAuthenticated', 'false')
   alert('✅ Info updated. Please log in again.')
 
-  // 清除并跳转
+  // Clear and redirect
   window.location.href = '/login'
 }
 
