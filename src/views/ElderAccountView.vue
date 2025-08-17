@@ -42,9 +42,12 @@
       <div class="col-md-9">
         <div v-if="currentTab === 'profile'">
           <h4>👤 Personal Information</h4>
-          <p><strong>Username:</strong> {{ user.username }}</p>
-          <p><strong>Email:</strong> {{ user.email }}</p>
-          <p><strong>Role:</strong> {{ user.role }}</p>
+          <div v-if="user">
+            <p><strong>Username:</strong> {{ user.username }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Role:</strong> {{ user.role }}</p>
+          </div>
+          <p v-else>Loading user data...</p>
         </div>
 
         <div v-if="currentTab === 'activities'">
@@ -96,13 +99,18 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router';
+
+// 引入所有需要的 Firebase 服务
+import { getAuth, updateEmail, updatePassword, signOut } from 'firebase/auth';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/firebase/config';
+
+const router = useRouter();
+const auth = getAuth();
 
 const currentTab = ref('profile')
-const user = ref({
-  username: '',
-  email: '',
-  role: ''
-})
+const user = ref(null)
 
 const activities = ref([])
 const equipments = ref([])
@@ -129,72 +137,104 @@ function validatePasswordFormat(password) {
   )
 }
 
-onMounted(() => {
-  const stored = JSON.parse(localStorage.getItem('currentUser'))
-  if (stored) {
-    user.value = stored
+onMounted(async () => {
+  const currentUser = auth.currentUser;
+  if (currentUser) {
+    // 1. 获取用户信息 (从 Auth 和 Firestore)
+    const userDocRef = doc(db, 'users', currentUser.uid);
+    const userDoc = await getDoc(userDocRef);
+
+    if(userDoc.exists()) {
+      user.value = { uid: currentUser.uid, email: currentUser.email, ...userDoc.data() };
+    } else {
+      console.error("User data not found in Firestore!");
+      // 可以选择登出或显示错误
+      return;
+    }
+
+    // 2. 获取用户参与的活动 (从 Firestore 查询)
+    const activitiesRef = collection(db, "activities");
+    // 假设 activities 文档中有一个 'registeredUsers' 数组字段，存储了参与用户的 UID
+    const q = query(activitiesRef, where("registeredUsers", "array-contains", currentUser.uid));
+    const querySnapshot = await getDocs(q);
+    
+    activities.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  } else {
+    console.log("No user is logged in. Redirecting to login.");
+    router.push('/login');
   }
 
-  // Get activities registered by the current user
-  const allActivities = JSON.parse(localStorage.getItem('activities') || '[]')
-  activities.value = allActivities.filter(
-    act => act.registeredUsers && act.registeredUsers.includes(user.value.username)
-  )
-
-  // Mock equipment data (for testing)
+  // 3. 模拟设备数据 (保持不变)
   equipments.value = [
     { name: 'Walker', date: '2025-06-28' },
     { name: 'Blood Pressure Monitor', date: '2025-07-02' }
-  ]
-})
+  ];
+});
 
-function updateSettings() {
-  const users = JSON.parse(localStorage.getItem('users') || '[]')
-  const current = JSON.parse(localStorage.getItem('currentUser'))
+// updateSettings: 使用 Firebase API 更新用户信息
+async function updateSettings() {
+  updateMessage.value = '';
+  const currentUser = auth.currentUser;
+  if (!currentUser) return;
 
-  const index = users.findIndex((u) => u.username === current.username)
-  if (index === -1) return
+  const trimmedEmail = newEmail.value.trim();
+  const trimmedPassword = newPassword.value.trim();
+  const promises = [];
 
-  const trimmedEmail = newEmail.value.trim()
-  const trimmedPassword = newPassword.value.trim()
+  // --- 1. 验证输入 ---
+  if (!trimmedEmail && !trimmedPassword) {
+    updateSuccess.value = false;
+    updateMessage.value = '❗ You changed nothing.';
+    return;
+  }
+  if (trimmedEmail && !validateEmailFormat(trimmedEmail)) {
+    updateSuccess.value = false;
+    updateMessage.value = '❌ Invalid email format.';
+    return;
+  }
+  if (trimmedPassword && !validatePasswordFormat(trimmedPassword)) {
+    updateSuccess.value = false;
+    updateMessage.value = '❌ Password must be 8+ chars...'; // 简写
+    return;
+  }
+  if (!confirm('Are you sure you want to update? You will be logged out.')) return;
 
-  const emailChanged = trimmedEmail && trimmedEmail !== users[index].email
-  const passwordChanged = trimmedPassword && trimmedPassword !== users[index].password
-
-  // No changes made
-  if (!emailChanged && !passwordChanged) {
-    updateSuccess.value = false
-    updateMessage.value = '❗ You changed nothing.'
-    return
+  // --- 2. 准备更新任务 ---
+  // 如果邮箱变了，准备两个任务：更新 Auth 和 更新 Firestore
+  if (trimmedEmail && trimmedEmail !== currentUser.email) {
+    promises.push(updateEmail(currentUser, trimmedEmail));
+    const userDocRef = doc(db, 'users', currentUser.uid);
+    promises.push(updateDoc(userDocRef, { email: trimmedEmail }));
   }
 
-  // Validation failed
-  if (emailChanged && !validateEmailFormat(trimmedEmail)) {
-    updateSuccess.value = false
-    updateMessage.value = '❌ Invalid email format.'
-    return
-  }
-  if (passwordChanged && !validatePasswordFormat(trimmedPassword)) {
-    updateSuccess.value = false
-    updateMessage.value = '❌ Password must be 8+ chars, include upper/lowercase, number, special char.'
-    return
+  // 如果密码变了，准备更新 Auth 的任务
+  if (trimmedPassword) {
+    promises.push(updatePassword(currentUser, trimmedPassword));
   }
 
-  // Confirm changes
-  if (!confirm('Are you sure you want to update? You will be logged out.')) return
+  // --- 3. 执行所有更新任务 ---
+  try {
+    await Promise.all(promises);
 
-  if (emailChanged) users[index].email = trimmedEmail
-  if (passwordChanged) users[index].password = trimmedPassword
-  localStorage.setItem('users', JSON.stringify(users))
+    updateSuccess.value = true;
+    updateMessage.value = '✅ Info updated successfully! Please log in again.';
+    
+    // 成功后登出用户
+    await signOut(auth);
+    router.push('/login');
 
-  localStorage.removeItem('currentUser')
-  localStorage.setItem('isAuthenticated', 'false')
-  alert('✅ Info updated. Please log in again.')
-
-  // Clear and redirect
-  window.location.href = '/login'
+  } catch (error) {
+    updateSuccess.value = false;
+    // 处理常见的 Firebase 错误
+    if (error.code === 'auth/requires-recent-login') {
+      updateMessage.value = '❌ This operation is sensitive and requires recent authentication. Please log out and log back in before trying again.';
+    } else {
+      updateMessage.value = `❌ An error occurred: ${error.message}`;
+    }
+    console.error("Error updating settings:", error);
+  }
 }
-
 </script>
 
 

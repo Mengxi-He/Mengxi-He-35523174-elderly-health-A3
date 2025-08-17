@@ -107,6 +107,9 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
+import { auth, db } from '@/firebase/config'
 
 const router = useRouter()
 const success = ref(false)
@@ -175,7 +178,8 @@ function validateRole(blur) {
   }
 }
 
-function handleRegister() {
+async function handleRegister() {
+  // 1. 本地表单验证 (这部分逻辑不变)
   validateEmail(true)
   validateUsername(true)
   validatePassword(true)
@@ -186,32 +190,96 @@ function handleRegister() {
     globalError.value = 'Please fix the errors above.'
     return
   }
+  
+  globalError.value = '' // 清除旧的错误信息
 
-  const users = JSON.parse(localStorage.getItem('users') || '[]')
-  const duplicate = users.find(
-    (u) => u.username === formData.value.username || u.email === formData.value.email
-  )
+  try {
+    // 2. 使用 Firebase 创建用户
+    const userCredential = await createUserWithEmailAndPassword(auth, formData.value.email, formData.value.password)
+    const user = userCredential.user;
 
-  if (duplicate) {
-    globalError.value = 'Username or email already exists.'
-    return
+    // 3. 将额外信息 (username, role) 存储到 Firestore
+    // 使用 user.uid 作为文档的唯一 ID
+    await setDoc(doc(db, "users", user.uid), {
+      username: formData.value.username,
+      email: formData.value.email,
+      role: formData.value.role,
+      createdAt: new Date() // 可选：添加一个创建时间戳
+    });
+
+    // 4. 注册成功
+    success.value = true
+    const role = formData.value.role; // 获取刚刚注册的角色
+
+    setTimeout(() => {
+      if (role === 'elder') {
+        router.push('/account-elder'); // 如果是长者，直接去长者账户页
+      } else if (role === 'volunteer') {
+        router.push('/volunteer-area'); // 如果是志愿者，直接去志愿者区
+      } else {
+        router.push('/'); // 其他情况（或默认）去首页
+      }
+    }, 2000);
+    // setTimeout(() => {
+    //   router.push('/login') // 或直接跳转到用户主页
+    // }, 2000)
+
+  } catch (error) {
+    // 5. 处理 Firebase 返回的错误
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+        globalError.value = 'This email address is already in use.'
+        break;
+      case 'auth/invalid-email':
+        globalError.value = 'The email address is not valid.'
+        break;
+      case 'auth/weak-password':
+        globalError.value = 'The password is too weak.'
+        break;
+      default:
+        globalError.value = 'An unexpected error occurred. Please try again.'
+    }
+    console.error("Firebase registration error:", error.message);
   }
-
-  users.push({
-    username: formData.value.username,
-    email: formData.value.email,
-    password: formData.value.password,
-    role: formData.value.role,
-  })
-
-  localStorage.setItem('users', JSON.stringify(users))
-  globalError.value = ''
-  success.value = true
-
-  setTimeout(() => {
-    router.push('/login')
-  }, 2000)
 }
+
+// function handleRegister() {
+//   validateEmail(true)
+//   validateUsername(true)
+//   validatePassword(true)
+//   validateConfirmPassword(true)
+//   validateRole(true)
+
+//   if (Object.values(errors.value).some((e) => e)) {
+//     globalError.value = 'Please fix the errors above.'
+//     return
+//   }
+
+//   const users = JSON.parse(localStorage.getItem('users') || '[]')
+//   const duplicate = users.find(
+//     (u) => u.username === formData.value.username || u.email === formData.value.email
+//   )
+
+//   if (duplicate) {
+//     globalError.value = 'Username or email already exists.'
+//     return
+//   }
+
+//   users.push({
+//     username: formData.value.username,
+//     email: formData.value.email,
+//     password: formData.value.password,
+//     role: formData.value.role,
+//   })
+
+//   localStorage.setItem('users', JSON.stringify(users))
+//   globalError.value = ''
+//   success.value = true
+
+//   setTimeout(() => {
+//     router.push('/login')
+//   }, 2000)
+// }
 </script>
 
 <style scoped>

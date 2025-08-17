@@ -51,6 +51,60 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+// 引入 Firebase 相关服务和方法
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { db } from '@/firebase/config' // 确保路径正确
+
+const loggedIn = ref(false)
+const userRole = ref(null) // 使用 null 作为初始值更清晰
+const router = useRouter()
+const auth = getAuth()
+
+// onMounted 是一个生命周期钩子，确保在组件挂载到页面后才执行代码
+onMounted(() => {
+  // 设置一个持久的 Firebase 认证状态监听器
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      // --- 用户已登录 ---
+      loggedIn.value = true;
+      
+      // 从 Firestore 获取该用户的角色信息
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      
+      if (userDoc.exists()) {
+        userRole.value = userDoc.data().role;
+      } else {
+        // 如果数据库里找不到用户信息，这是一个异常情况
+        console.error("User is authenticated, but their data is missing from Firestore.");
+        userRole.value = null;
+      }
+
+    } else {
+      // --- 用户已登出 ---
+      loggedIn.value = false;
+      userRole.value = null;
+    }
+  });
+});
+
+// 新的登出函数
+async function logout() {
+  try {
+    await signOut(auth); // 通知 Firebase 用户登出
+    // 登出成功后，onAuthStateChanged 会自动触发，将 loggedIn 和 userRole 置为 false/null
+    // 所以我们在这里不再需要手动修改它们的值
+    router.push('/login'); // 跳转到登录页
+  } catch (error) {
+    console.error("Error signing out: ", error);
+  }
+}
+</script>
+
+<!-- <script setup>
 import { ref, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 
@@ -80,7 +134,7 @@ function logout() {
   userRole.value = ''
   router.push('/login')
 }
-</script>
+</script> -->
 
 
 <style scoped>
