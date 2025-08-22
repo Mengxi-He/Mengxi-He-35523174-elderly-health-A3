@@ -59,14 +59,16 @@
             :options="dtOptions"
             class="table table-hover table-striped"
             id="activitiesTable"
+            @select="handleRowSelect"
+            @deselect="handleRowSelect"
           >
             <thead>
               <!-- 表头现在由 columns 配置自动生成 -->
             </thead>
           </DataTable>
 
-          <button class="btn btn-success mt-3" @click="registerActivities">
-            Register Selected
+          <button class="btn btn-success mt-3" @click="registerActivities" :disabled="selectedActivities.length === 0">
+            Register Selected ({{ selectedActivities.length }})
           </button>
         </div>
       </div>
@@ -80,9 +82,12 @@ import { useRouter } from 'vue-router'
 
 import DataTable from 'datatables.net-vue3';
 import DataTablesCore from 'datatables.net-bs5';
+import DataTablesSelect from 'datatables.net-select-bs5';
 import 'datatables.net-bs5/css/dataTables.bootstrap5.min.css';
+import 'datatables.net-select-bs5/css/select.bootstrap5.min.css';
 
 DataTable.use(DataTablesCore);
+DataTable.use(DataTablesSelect);
 
 
 // 【新增】引入所有需要的 Firebase 服务
@@ -107,23 +112,43 @@ const columns = [
   { 
     data: null, 
     title: 'Select',
-    orderable: false, // 这一列不允许排序
-    render: (data, type, row) => {
-      // 动态渲染复选框。注意：这里的交互逻辑需要稍微调整
-      // 为了简单起见，我们先渲染，交互逻辑后续处理
-      return `<input type="checkbox" class="form-check-input" value="${row.id}">`;
-    }
+    orderable: false,
+    defaultContent: '',
+    className: 'select-checkbox'
   },
   { data: 'title', title: 'Activity' },
   { data: 'date', title: 'Date' },
   { data: 'time', title: 'Time' },
   { data: 'location', title: 'Location' },
+  { 
+    data: null,
+    title: 'Status',
+    orderable: false,
+    render: (data, type, row) => {
+      if (isAlreadyRegistered(row)) {
+        return '<span class="badge bg-success">✅ Registered</span>';
+      }
+      return '<span class="badge bg-secondary">Available</span>';
+    }
+  }
 ];
 
 // 【新增】为 DataTable 提供配置选项
 const dtOptions = {
   responsive: true,
   pageLength: 10, // D.3 要求：每页最多显示10行
+  select: { 
+    style: 'multi', 
+    selector: 'td:first-child' 
+  },
+  // 【新增】行回调函数，禁用已报名的行
+  rowCallback: (row, data) => {
+    if (isAlreadyRegistered(data)) {
+      row.classList.add('dt-row-disabled');
+      // 移除选择类，防止选择已报名的活动
+      row.classList.remove('selected');
+    }
+  },
   // 默认开启了排序和搜索，无需额外配置
 };
 
@@ -183,10 +208,22 @@ function calculateAverage(activity) {
   return (total / activity.scores.length).toFixed(1)
 }
 
-// 【修改】availableActivities 计算属性现在使用 uid
-const availableActivities = computed(() =>
-  activities.value.filter(a => !a.registeredUsers?.includes(userUID.value))
-)
+// 【新增】处理 DataTable 行选择
+function handleRowSelect(e, dt, type, indexes) {
+  const selectedRowsData = dt.rows({ selected: true }).data().toArray();
+  // 过滤掉已报名的活动
+  const validSelections = selectedRowsData.filter(row => !isAlreadyRegistered(row));
+  selectedActivities.value = validSelections.map(row => row.id);
+  console.log('Selected activities:', selectedActivities.value);
+}
+
+// 【新增】检查用户是否已报名某个活动
+function isAlreadyRegistered(activity) {
+  return activity.registeredUsers?.includes(userUID.value);
+}
+
+// 【修改】显示所有活动，不过滤已报名的
+const availableActivities = computed(() => activities.value)
 
 // 【修改】checkTimeConflict 函数现在使用 uid
 function checkTimeConflict(activity) {
@@ -251,6 +288,10 @@ async function registerActivities() {
     
     selectedActivities.value = []
     alert('Successfully registered! A confirmation email will be sent to you shortly.')
+    
+    // 【新增】刷新 DataTable 以更新行状态
+    // 触发重新渲染来更新禁用状态
+    await new Promise(resolve => setTimeout(resolve, 100));
 
   } catch (error) {
     console.error("Error registering for activities:", error)
@@ -269,5 +310,34 @@ async function registerActivities() {
   background-color: #0d6efd;
   color: white;
   border-color: #0d6efd;
+}
+
+/* DataTable select checkbox styling */
+:deep(.select-checkbox) {
+  text-align: center;
+  width: 40px;
+}
+
+:deep(.select-checkbox:before) {
+  content: '';
+  margin-top: 0;
+  margin-left: 0;
+}
+
+/* 已报名行的样式 */
+:deep(.dt-row-disabled) {
+  background-color: #f8f9fa !important;
+  opacity: 0.7;
+  color: #6c757d !important;
+}
+
+:deep(.dt-row-disabled td) {
+  color: #6c757d !important;
+}
+
+/* 禁用已报名行的复选框点击 */
+:deep(.dt-row-disabled .select-checkbox) {
+  pointer-events: none;
+  cursor: not-allowed;
 }
 </style>

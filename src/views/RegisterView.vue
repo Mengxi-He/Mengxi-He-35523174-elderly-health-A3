@@ -243,43 +243,7 @@ async function handleRegister() {
   }
 }
 
-// function handleRegister() {
-//   validateEmail(true)
-//   validateUsername(true)
-//   validatePassword(true)
-//   validateConfirmPassword(true)
-//   validateRole(true)
 
-//   if (Object.values(errors.value).some((e) => e)) {
-//     globalError.value = 'Please fix the errors above.'
-//     return
-//   }
-
-//   const users = JSON.parse(localStorage.getItem('users') || '[]')
-//   const duplicate = users.find(
-//     (u) => u.username === formData.value.username || u.email === formData.value.email
-//   )
-
-//   if (duplicate) {
-//     globalError.value = 'Username or email already exists.'
-//     return
-//   }
-
-//   users.push({
-//     username: formData.value.username,
-//     email: formData.value.email,
-//     password: formData.value.password,
-//     role: formData.value.role,
-//   })
-
-//   localStorage.setItem('users', JSON.stringify(users))
-//   globalError.value = ''
-//   success.value = true
-
-//   setTimeout(() => {
-//     router.push('/login')
-//   }, 2000)
-// }
 </script>
 
 <style scoped>

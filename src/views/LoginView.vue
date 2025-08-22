@@ -71,8 +71,6 @@ async function handleLogin() {
     // 1. 判断用户输入的是邮箱还是用户名
     //    一个简单的判断方法是检查是否包含 '@' 符号
     if (!identifier.value.includes('@')) {
-       console.log('2a. Identifier is a username. Querying Firestore for email.'); // 检查点 2a 
-
       // 如果是用户名, 需要去 Firestore 查询对应的邮箱
       const usersRef = collection(db, "users")
       const q = query(usersRef, where("username", "==", identifier.value))
@@ -84,29 +82,22 @@ async function handleLogin() {
       
       // 获取查询到的第一个用户的 email
       email = querySnapshot.docs[0].data().email
-      console.log('2b. Email found:', email); // 检查点 2b
     }
-    console.log('3. Attempting to sign in with Firebase Auth...'); // 检查点 3
+
     // 2. 使用邮箱和密码进行 Firebase 登录
     const userCredential = await signInWithEmailAndPassword(auth, email, password.value)
     const user = userCredential.user
-    console.log('4. Firebase Auth successful! User UID:', user.uid); // 检查点 4
 
-    console.log('5. Fetching user role from Firestore...'); // 检查点 5
     // 3. 从 Firestore 获取用户角色信息
     const userDocRef = doc(db, "users", user.uid)
     const userDoc = await getDoc(userDocRef)
-    console.log('6. Firestore getDoc call completed.'); // 检查点 6
 
     if (!userDoc.exists()) {
-      console.error('7a. Error: User document does not exist in Firestore!'); // 检查点 7a
       throw new Error("User data not found in database.")
     }
 
     const userData = userDoc.data()
-    console.log('7b. User data fetched:', userData); // 检查点 7b
 
-    console.log('8. Preparing to redirect based on role:', userData.role); // 检查点 8
     // 4. 根据角色进行重定向
     // 注意：你不再需要手动设置 localStorage.setItem('isAuthenticated', 'true')
     // Firebase 会自动管理用户的登录状态
@@ -119,7 +110,6 @@ async function handleLogin() {
     } else {
       router.push('/') // 默认跳转
     }
-    console.log('9. Redirect command issued.'); // 检查点 9
 
   } catch (err) {
     // 5. 处理 Firebase 返回的错误
@@ -136,40 +126,8 @@ async function handleLogin() {
     }
   } finally {
     isLoading.value = false // 无论成功失败，都结束加载状态
-    console.log('10. handleLogin finished (finally block).'); // 检查点 10
   }
 }
-
-// function handleLogin() {
-//   const users = JSON.parse(localStorage.getItem('users') || '[]')
-
-//   // Match username or email
-//   const user = users.find(
-//     (u) =>
-//       (u.username === identifier.value || u.email === identifier.value) &&
-//       u.password === password.value
-//   )
-
-//   if (user) {
-//     // Save login state
-//     localStorage.setItem('isAuthenticated', 'true')
-//     localStorage.setItem('currentUser', JSON.stringify(user))
-//     error.value = false
-
-//     // Redirect based on role
-//     if (user.role === 'admin') {
-//       router.push('/admin-panel')
-//     } else if (user.role === 'elder') {
-//       router.push('/account-elder')
-//     } else if (user.role === 'volunteer') {
-//       router.push('/volunteer-area')
-//     } else {
-//       router.push('/')
-//     }
-//   } else {
-//     error.value = true
-//   }
-// }
 
 function goToRegister() {
   router.push('/register')
