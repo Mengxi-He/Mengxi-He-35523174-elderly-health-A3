@@ -78,7 +78,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router';
 
-// 【修改】引入 Firebase 相关服务
+// Firebase services for authentication and database operations
 import { getAuth, updateEmail, updatePassword, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/config';
@@ -111,7 +111,7 @@ function validatePasswordFormat(password) {
   )
 }
 
-// 【修改】onMounted 完全重写，从 Firebase 加载数据
+// Load user data and volunteer activities from Firebase
 onMounted(async () => {
   const currentUser = auth.currentUser;
   if (!currentUser) {
@@ -119,7 +119,7 @@ onMounted(async () => {
     return;
   }
 
-  // 1. 获取用户信息 (逻辑与 ElderAccountView 完全一致)
+  // Get user information from Firestore
   const userDocRef = doc(db, 'users', currentUser.uid);
   const userDoc = await getDoc(userDocRef);
   if (userDoc.exists()) {
@@ -129,16 +129,14 @@ onMounted(async () => {
     return;
   }
 
-  // 2. 获取该志愿者加入的活动 (查询不同的集合)
-  // 【关键区别】我们现在查询 'volunteer_activities' 集合
+  // Get volunteer activities that this user has joined
   const activitiesRef = collection(db, "volunteer_activities");
-  // 【关键区别】我们现在检查 'registeredVolunteers' 字段
   const q = query(activitiesRef, where("registeredVolunteers", "array-contains", currentUser.uid));
   const querySnapshot = await getDocs(q);
   activities.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 });
 
-// 【修改】updateSettings 函数 (逻辑与 ElderAccountView 完全一致)
+// Update user email and password settings
 async function updateSettings() {
   updateMessage.value = '';
   const currentUser = auth.currentUser;
@@ -148,13 +146,13 @@ async function updateSettings() {
   const trimmedPassword = newPassword.value.trim();
   const promises = [];
 
-  // --- 验证逻辑 ---
-  if (!trimmedEmail && !trimmedPassword) { /* ... */ return; }
-  if (trimmedEmail && !validateEmailFormat(trimmedEmail)) { /* ... */ return; }
-  if (trimmedPassword && !validatePasswordFormat(trimmedPassword)) { /* ... */ return; }
+  // Validation logic
+  if (!trimmedEmail && !trimmedPassword) { return; }
+  if (trimmedEmail && !validateEmailFormat(trimmedEmail)) { return; }
+  if (trimmedPassword && !validatePasswordFormat(trimmedPassword)) { return; }
   if (!confirm('Are you sure you want to update? You will be logged out.')) return;
 
-  // --- 准备更新任务 ---
+  // Prepare update operations
   if (trimmedEmail && trimmedEmail !== currentUser.email) {
     promises.push(updateEmail(currentUser, trimmedEmail));
     const userDocRef = doc(db, 'users', currentUser.uid);
@@ -164,7 +162,7 @@ async function updateSettings() {
     promises.push(updatePassword(currentUser, trimmedPassword));
   }
 
-  // --- 执行更新 ---
+  // Execute updates
   try {
     await Promise.all(promises);
     updateSuccess.value = true;

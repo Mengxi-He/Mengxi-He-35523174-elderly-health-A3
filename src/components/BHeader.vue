@@ -9,6 +9,9 @@
         <li class="nav-item">
           <router-link to="/about" class="nav-link" active-class="active">About</router-link>
         </li>
+        <li class="nav-item">
+          <router-link to="/interactive-map" class="nav-link" active-class="active">Interactive Map</router-link>
+        </li>
 
         <!--  After logging in, Elder displays -->
         <template v-if="loggedIn && userRole === 'elder'">

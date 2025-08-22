@@ -101,7 +101,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router';
 
-// 引入所有需要的 Firebase 服务
+// Firebase services for authentication and database operations
 import { getAuth, updateEmail, updatePassword, signOut } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/firebase/config';
@@ -115,13 +115,13 @@ const user = ref(null)
 const activities = ref([])
 const equipments = ref([])
 
-// Set fields
+// Settings form fields
 const newEmail = ref('')
 const newPassword = ref('')
 const updateMessage = ref('')
 const updateSuccess = ref(false)
 
-// Validation functions
+// Email and password validation functions
 function validateEmailFormat(email) {
   const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return regex.test(email)
@@ -140,7 +140,7 @@ function validatePasswordFormat(password) {
 onMounted(async () => {
   const currentUser = auth.currentUser;
   if (currentUser) {
-    // 1. 获取用户信息 (从 Auth 和 Firestore)
+    // Get user information from Auth and Firestore
     const userDocRef = doc(db, 'users', currentUser.uid);
     const userDoc = await getDoc(userDocRef);
 
@@ -148,13 +148,11 @@ onMounted(async () => {
       user.value = { uid: currentUser.uid, email: currentUser.email, ...userDoc.data() };
     } else {
       console.error("User data not found in Firestore!");
-      // 可以选择登出或显示错误
       return;
     }
 
-    // 2. 获取用户参与的活动 (从 Firestore 查询)
+    // Get user's joined activities from Firestore
     const activitiesRef = collection(db, "activities");
-    // 假设 activities 文档中有一个 'registeredUsers' 数组字段，存储了参与用户的 UID
     const q = query(activitiesRef, where("registeredUsers", "array-contains", currentUser.uid));
     const querySnapshot = await getDocs(q);
     
@@ -165,14 +163,14 @@ onMounted(async () => {
     router.push('/login');
   }
 
-  // 3. 模拟设备数据 (保持不变)
+  // Mock equipment data
   equipments.value = [
     { name: 'Walker', date: '2025-06-28' },
     { name: 'Blood Pressure Monitor', date: '2025-07-02' }
   ];
 });
 
-// updateSettings: 使用 Firebase API 更新用户信息
+// Update user email and password settings
 async function updateSettings() {
   updateMessage.value = '';
   const currentUser = auth.currentUser;
@@ -182,7 +180,7 @@ async function updateSettings() {
   const trimmedPassword = newPassword.value.trim();
   const promises = [];
 
-  // --- 1. 验证输入 ---
+  // Input validation
   if (!trimmedEmail && !trimmedPassword) {
     updateSuccess.value = false;
     updateMessage.value = '❗ You changed nothing.';
@@ -195,38 +193,36 @@ async function updateSettings() {
   }
   if (trimmedPassword && !validatePasswordFormat(trimmedPassword)) {
     updateSuccess.value = false;
-    updateMessage.value = '❌ Password must be 8+ chars...'; // 简写
+    updateMessage.value = '❌ Password must be 8+ chars...';
     return;
   }
   if (!confirm('Are you sure you want to update? You will be logged out.')) return;
 
-  // --- 2. 准备更新任务 ---
-  // 如果邮箱变了，准备两个任务：更新 Auth 和 更新 Firestore
+  // Prepare update operations
   if (trimmedEmail && trimmedEmail !== currentUser.email) {
     promises.push(updateEmail(currentUser, trimmedEmail));
     const userDocRef = doc(db, 'users', currentUser.uid);
     promises.push(updateDoc(userDocRef, { email: trimmedEmail }));
   }
 
-  // 如果密码变了，准备更新 Auth 的任务
   if (trimmedPassword) {
     promises.push(updatePassword(currentUser, trimmedPassword));
   }
 
-  // --- 3. 执行所有更新任务 ---
+  // Execute all update operations
   try {
     await Promise.all(promises);
 
     updateSuccess.value = true;
     updateMessage.value = '✅ Info updated successfully! Please log in again.';
     
-    // 成功后登出用户
+    // Sign out user after successful update
     await signOut(auth);
     router.push('/login');
 
   } catch (error) {
     updateSuccess.value = false;
-    // 处理常见的 Firebase 错误
+    // Handle common Firebase errors
     if (error.code === 'auth/requires-recent-login') {
       updateMessage.value = '❌ This operation is sensitive and requires recent authentication. Please log out and log back in before trying again.';
     } else {

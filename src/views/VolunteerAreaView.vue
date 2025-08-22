@@ -24,7 +24,7 @@
      </ul>
     </div>
 
-    <!-- 【升级】Register Tab，学习 Elder 版本，使用 DataTable -->
+    <!-- Volunteer Activity Registration Tab with DataTable -->
     <div v-if="currentTab === 'register'">
      <h4>📋 Volunteer Activity Registration</h4>
      <p class="text-muted">Select the volunteer activities you're interested in.</p>
@@ -64,7 +64,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 
-// 【学习 Elder 版本】引入 DataTable 相关库
+// DataTable imports for volunteer activity management
 import DataTable from 'datatables.net-vue3';
 import DataTablesCore from 'datatables.net-bs5';
 import DataTablesSelect from 'datatables.net-select-bs5';
@@ -73,7 +73,7 @@ import 'datatables.net-select-bs5/css/select.bootstrap5.min.css';
 DataTable.use(DataTablesCore);
 DataTable.use(DataTablesSelect);
 
-// 【学习 Elder 版本】引入 Firebase 相关库
+// Firebase imports for authentication and database operations
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { db } from '@/firebase/config';
 import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firestore';
@@ -81,7 +81,7 @@ import { collection, getDocs, doc, updateDoc, arrayUnion } from 'firebase/firest
 const router = useRouter();
 const auth = getAuth();
 
-// --- State refs (与 Elder 版本类似) ---
+// Component state
 const currentTab = ref('notice');
 const activities = ref([]);
 const selectedActivities = ref([]);
@@ -89,7 +89,7 @@ const successMessage = ref('');
 const userUID = ref(null);
 const isLoading = ref(true);
 
-// --- DataTable Config (学习 Elder 版本，并加入 Volunteer 逻辑) ---
+// DataTable configuration with volunteer-specific logic
 const columns = [
   { data: null, defaultContent: '', orderable: false, className: 'select-checkbox' },
   { data: 'title', title: 'Activity' },
@@ -106,11 +106,11 @@ const columns = [
   { 
     data: null,
     title: 'Status',
-    // 【关键】在 render 函数中嵌入 Volunteer 的业务逻辑
+    // Render status based on volunteer-specific business logic
     render: (data, type, row) => {
       if (hasJoined(row)) return '<span class="text-success">✅ Already registered</span>';
       if (isFull(row)) return '<span class="text-danger">⛔ Full</span>';
-      if (isConflict(row)) return '<span class="text-danger">⛔ Time conflict</span>'; // 注意：这里的冲突检测是基于已选中的行
+      if (isConflict(row)) return '<span class="text-danger">⛔ Time conflict</span>';
       return '<span class="text-info">Available</span>';
     }
   },
@@ -122,7 +122,7 @@ const dtOptions = {
   searching: true,
   ordering: true,
   select: { style: 'multi', selector: 'td:first-child' },
-  // 【关键】根据行数据决定是否可选，嵌入 Volunteer 的业务逻辑
+  // Apply row styling based on availability status
   rowCallback: (row, data) => {
     if (isFull(data) || hasJoined(data) || isConflict(data)) {
       row.classList.add('dt-row-disabled');
@@ -132,7 +132,7 @@ const dtOptions = {
   }
 };
 
-// 【学习 Elder 版本】使用 onAuthStateChanged 加载数据
+// Load volunteer activities data on authentication state change
 onMounted(() => {
   const unsubscribe = onAuthStateChanged(auth, async (user) => {
     if (user) {
@@ -147,7 +147,7 @@ onMounted(() => {
   });
 });
 
-// --- Volunteer 独有的业务逻辑 (适配 Firebase) ---
+// Business logic functions for volunteer activity management
 function isFull(activity) {
   return activity.registeredVolunteers && activity.registeredVolunteers.length >= activity.capacity;
 }
@@ -159,35 +159,35 @@ function hasJoined(activity) {
 function isConflict(newAct) {
   if (!userUID.value) return false;
   
-  // 检查与【已报名】活动的冲突
+  // Check conflicts with already registered activities
   const currentUserActivities = activities.value.filter(a => 
     a.registeredVolunteers && a.registeredVolunteers.includes(userUID.value)
   );
   
-  // 检查与【当前选择】活动的冲突
+  // Check conflicts with currently selected activities
   const currentlySelectedActivities = activities.value.filter(a => 
     selectedActivities.value.includes(a.id) && a.id !== newAct.id
   );
   
-  // 合并两个列表进行冲突检查
+  // Combine both lists for conflict checking
   const allUserActivities = [...currentUserActivities, ...currentlySelectedActivities];
   
   return allUserActivities.some(a => a.date === newAct.date && a.time === newAct.time);
 }
 
-// 【学习 Elder 版本】DataTable 事件处理
+// Handle DataTable row selection events
 function handleRowSelect(e, dt, type, indexes) {
   const selectedRowsData = dt.rows({ selected: true }).data().toArray();
   
-  // 检查新选择的活动是否有时间冲突
+  // Validate new selections for time conflicts
   const validSelections = [];
   for (const row of selectedRowsData) {
-    // 临时设置选择列表来检查冲突
+    // Temporarily set selection list to check conflicts
     const tempSelected = validSelections.map(r => r.id);
     selectedActivities.value = tempSelected;
     
     if (isConflict(row)) {
-      // 如果有冲突，取消选择这一行
+      // Deselect conflicting row
       const rowIndex = dt.row((idx, data) => data.id === row.id).index();
       dt.row(rowIndex).deselect();
       alert(`Cannot select "${row.title}" due to time conflict with other selected activities.`);
@@ -200,13 +200,13 @@ function handleRowSelect(e, dt, type, indexes) {
   console.log('Selected activities:', selectedActivities.value);
 }
 
-// 【学习 Elder 版本】提交逻辑
+// Submit volunteer activity registrations
 async function submitRegistrations() {
   if (!userUID.value || selectedActivities.value.length === 0) return;
 
   const promises = [];
   
-  // 再次检查时间冲突和容量
+  // Final validation before submission
   for (const id of selectedActivities.value) {
     const act = activities.value.find(a => a.id === id);
     if (isConflict(act) || isFull(act) || hasJoined(act)) {
@@ -226,7 +226,7 @@ async function submitRegistrations() {
 
     successMessage.value = 'Successfully registered!';
     
-    // 刷新数据以更新 UI
+    // Refresh data to update UI
     isLoading.value = true;
     const querySnapshot = await getDocs(collection(db, 'volunteer_activities'));
     activities.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

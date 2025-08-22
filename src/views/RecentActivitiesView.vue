@@ -1,7 +1,7 @@
 <template>
   <div class="container-fluid mt-4">
     <div class="row">
-      <!-- left sidebar (无变动) -->
+      <!-- Left sidebar -->
       <div class="col-md-3">
         <div class="list-group">
           <button class="list-group-item list-group-item-action"
@@ -23,7 +23,7 @@
           {{ activeTab === 'rate' ? '🎯 Activities to Rate' : '📝 Activities to Register' }}
         </h3>
 
-        <!-- Rate Tab (模板基本无变动, 逻辑已更新) -->
+        <!-- Rating tab -->
         <div v-if="activeTab === 'rate'">
           <p v-if="activities.length === 0">Loading activities...</p>
           <div v-for="activity in activities" :key="activity.id" class="card mb-3">
@@ -50,9 +50,8 @@
           </div>
         </div>
 
-        <!-- Register Tab (模板已修改为表格, 满足 D.3) -->
+        <!-- Registration tab with DataTable -->
         <div v-else>
-          <!-- 【修改】用 DataTable 组件替换 table -->
           <DataTable 
             :columns="columns" 
             :data="availableActivities" 
@@ -63,7 +62,6 @@
             @deselect="handleRowSelect"
           >
             <thead>
-              <!-- 表头现在由 columns 配置自动生成 -->
             </thead>
           </DataTable>
 
@@ -80,6 +78,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
+// DataTable imports
 import DataTable from 'datatables.net-vue3';
 import DataTablesCore from 'datatables.net-bs5';
 import DataTablesSelect from 'datatables.net-select-bs5';
@@ -89,8 +88,7 @@ import 'datatables.net-select-bs5/css/select.bootstrap5.min.css';
 DataTable.use(DataTablesCore);
 DataTable.use(DataTablesSelect);
 
-
-// 【新增】引入所有需要的 Firebase 服务
+// Firebase imports
 import { getAuth } from 'firebase/auth'
 import { db } from '@/firebase/config'
 import { collection, getDocs, doc, updateDoc, arrayUnion, serverTimestamp, addDoc } from 'firebase/firestore'
@@ -98,7 +96,7 @@ import { collection, getDocs, doc, updateDoc, arrayUnion, serverTimestamp, addDo
 const router = useRouter()
 const auth = getAuth()
 
-// 【修改】使用 uid 和 email 来识别用户，而不是 username
+// User authentication state
 const userUID = ref(null)
 const userEmail = ref(null)
 
@@ -107,7 +105,7 @@ const ratings = ref({})
 const selectedActivities = ref([])
 const activeTab = ref('rate')
 
-// 【新增】为 DataTable 定义列
+// DataTable column configuration
 const columns = [
   { 
     data: null, 
@@ -133,49 +131,46 @@ const columns = [
   }
 ];
 
-// 【新增】为 DataTable 提供配置选项
+// DataTable configuration options
 const dtOptions = {
   responsive: true,
-  pageLength: 10, // D.3 要求：每页最多显示10行
+  pageLength: 10,
   select: { 
     style: 'multi', 
     selector: 'td:first-child' 
   },
-  // 【新增】行回调函数，禁用已报名的行
+  // Disable row selection for already registered activities
   rowCallback: (row, data) => {
     if (isAlreadyRegistered(data)) {
       row.classList.add('dt-row-disabled');
-      // 移除选择类，防止选择已报名的活动
       row.classList.remove('selected');
     }
   },
-  // 默认开启了排序和搜索，无需额外配置
 };
 
-// 【修改】onMounted 完全重写，从 Firebase 加载数据
+// Load data from Firebase on component mount
 onMounted(async () => {
   const currentUser = auth.currentUser
   if (currentUser) {
     userUID.value = currentUser.uid
     userEmail.value = currentUser.email
   } else {
-    // 如果没有用户登录，则不加载数据并可能重定向
     console.log("No user logged in.");
     router.push('/login');
     return;
   }
   
-  // 从 Firestore 的 'activities' 集合中获取数据
+  // Load activities from Firestore
   const querySnapshot = await getDocs(collection(db, 'activities'))
   activities.value = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
 })
 
-// 【修改】hasRated 函数现在使用 uid
+// Check if user has rated an activity
 function hasRated(activity) {
   return activity.ratingsByUser && activity.ratingsByUser[userUID.value] !== undefined
 }
 
-// 【修改】submitRating 函数现在更新 Firestore
+// Submit rating to Firestore
 async function submitRating(activity) {
   const score = parseInt(ratings.value[activity.id])
   if (!score || score < 1 || score > 5) return
@@ -183,13 +178,13 @@ async function submitRating(activity) {
   const activityRef = doc(db, 'activities', activity.id)
   
   try {
-    // 使用点表示法更新 map 字段，并使用 arrayUnion 原子化地添加分数
+    // Update Firestore with rating
     await updateDoc(activityRef, {
       [`ratingsByUser.${userUID.value}`]: score,
       scores: arrayUnion(score)
     })
     
-    // 在前端同步更新，避免重新加载
+    // Update local state to avoid reload
     if (!activity.ratingsByUser) activity.ratingsByUser = {}
     if (!activity.scores) activity.scores = []
     activity.ratingsByUser[userUID.value] = score
@@ -201,31 +196,31 @@ async function submitRating(activity) {
   }
 }
 
-// calculateAverage 函数无变动
+// Calculate average rating for an activity
 function calculateAverage(activity) {
   if (!activity.scores?.length) return 'N/A'
   const total = activity.scores.reduce((a, b) => a + b, 0)
   return (total / activity.scores.length).toFixed(1)
 }
 
-// 【新增】处理 DataTable 行选择
+// Handle DataTable row selection
 function handleRowSelect(e, dt, type, indexes) {
   const selectedRowsData = dt.rows({ selected: true }).data().toArray();
-  // 过滤掉已报名的活动
+  // Filter out already registered activities
   const validSelections = selectedRowsData.filter(row => !isAlreadyRegistered(row));
   selectedActivities.value = validSelections.map(row => row.id);
   console.log('Selected activities:', selectedActivities.value);
 }
 
-// 【新增】检查用户是否已报名某个活动
+// Check if user is already registered for an activity
 function isAlreadyRegistered(activity) {
   return activity.registeredUsers?.includes(userUID.value);
 }
 
-// 【修改】显示所有活动，不过滤已报名的
+// Show all activities (registered and unregistered)
 const availableActivities = computed(() => activities.value)
 
-// 【修改】checkTimeConflict 函数现在使用 uid
+// Check for time conflicts between activities
 function checkTimeConflict(activity) {
   const userEvents = activities.value.filter(a => a.registeredUsers?.includes(userUID.value))
   return userEvents.some(
@@ -233,21 +228,21 @@ function checkTimeConflict(activity) {
   )
 }
 
-// 【修改】registerActivities 函数现在更新 Firestore 并触发邮件
+// Register for selected activities and send confirmation emails
 async function registerActivities() {
   if (!userUID.value || selectedActivities.value.length === 0) return
 
   const promises = []
   const successfullyRegisteredActivities = []
 
-  // 为每个选中的活动创建一个更新 Promise
+  // Create update promises for each selected activity
   selectedActivities.value.forEach(activityId => {
     const activityRef = doc(db, 'activities', activityId)
     promises.push(
       updateDoc(activityRef, {
         registeredUsers: arrayUnion(userUID.value)
       }).then(() => {
-        // 记录成功报名的活动信息，用于后续发送邮件
+        // Track successfully registered activities for email notification
         const activityData = activities.value.find(a => a.id === activityId)
         if (activityData) {
           successfullyRegisteredActivities.push(activityData)
@@ -257,10 +252,10 @@ async function registerActivities() {
   })
 
   try {
-    // 等待所有数据库更新完成
+    // Wait for all database updates to complete
     await Promise.all(promises)
 
-    // 【新增】D.2 & E.1 需求实现: 写入邮件队列以触发云函数
+    // Send confirmation emails via mail queue
     if (successfullyRegisteredActivities.length > 0) {
       const mailPromises = successfullyRegisteredActivities.map(activity => {
         return addDoc(collection(db, 'mailQueue'), {
@@ -268,9 +263,8 @@ async function registerActivities() {
           message: {
             subject: `Confirmation for joining: ${activity.title}`,
             text: `Hi! You have successfully registered for the activity "${activity.title}" on ${activity.date} at ${activity.location}. We look forward to seeing you!`,
-            // 您的云函数可以根据这些信息生成附件
             html: `<h3>Confirmation for joining: ${activity.title}</h3><p>Hi! You have successfully registered for the activity "${activity.title}" on ${activity.date} at ${activity.location}. We look forward to seeing you!</p>`,
-            activityInfo: activity // 传递活动信息给云函数
+            activityInfo: activity
           },
           createdAt: serverTimestamp()
         })
@@ -278,7 +272,7 @@ async function registerActivities() {
       await Promise.all(mailPromises);
     }
     
-    // 更新前端 UI
+    // Update frontend UI
     activities.value.forEach(activity => {
       if (selectedActivities.value.includes(activity.id)) {
         if (!activity.registeredUsers) activity.registeredUsers = []
@@ -289,8 +283,7 @@ async function registerActivities() {
     selectedActivities.value = []
     alert('Successfully registered! A confirmation email will be sent to you shortly.')
     
-    // 【新增】刷新 DataTable 以更新行状态
-    // 触发重新渲染来更新禁用状态
+    // Refresh DataTable to update row states
     await new Promise(resolve => setTimeout(resolve, 100));
 
   } catch (error) {
@@ -324,7 +317,7 @@ async function registerActivities() {
   margin-left: 0;
 }
 
-/* 已报名行的样式 */
+/* Styling for already registered rows */
 :deep(.dt-row-disabled) {
   background-color: #f8f9fa !important;
   opacity: 0.7;

@@ -179,7 +179,7 @@ function validateRole(blur) {
 }
 
 async function handleRegister() {
-  // 1. 本地表单验证 (这部分逻辑不变)
+  // Form validation
   validateEmail(true)
   validateUsername(true)
   validatePassword(true)
@@ -191,41 +191,37 @@ async function handleRegister() {
     return
   }
   
-  globalError.value = '' // 清除旧的错误信息
+  globalError.value = ''
 
   try {
-    // 2. 使用 Firebase 创建用户
+    // Create user with Firebase Authentication
     const userCredential = await createUserWithEmailAndPassword(auth, formData.value.email, formData.value.password)
     const user = userCredential.user;
 
-    // 3. 将额外信息 (username, role) 存储到 Firestore
-    // 使用 user.uid 作为文档的唯一 ID
+    // Store additional user information in Firestore
     await setDoc(doc(db, "users", user.uid), {
       username: formData.value.username,
       email: formData.value.email,
       role: formData.value.role,
-      createdAt: new Date() // 可选：添加一个创建时间戳
+      createdAt: new Date()
     });
 
-    // 4. 注册成功
+    // Registration successful - redirect based on role
     success.value = true
-    const role = formData.value.role; // 获取刚刚注册的角色
+    const role = formData.value.role;
 
     setTimeout(() => {
       if (role === 'elder') {
-        router.push('/account-elder'); // 如果是长者，直接去长者账户页
+        router.push('/account-elder');
       } else if (role === 'volunteer') {
-        router.push('/volunteer-area'); // 如果是志愿者，直接去志愿者区
+        router.push('/volunteer-area');
       } else {
-        router.push('/'); // 其他情况（或默认）去首页
+        router.push('/');
       }
     }, 2000);
-    // setTimeout(() => {
-    //   router.push('/login') // 或直接跳转到用户主页
-    // }, 2000)
 
   } catch (error) {
-    // 5. 处理 Firebase 返回的错误
+    // Handle Firebase authentication errors
     switch (error.code) {
       case 'auth/email-already-in-use':
         globalError.value = 'This email address is already in use.'

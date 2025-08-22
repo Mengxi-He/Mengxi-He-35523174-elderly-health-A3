@@ -58,7 +58,7 @@ import { auth, db } from '@/firebase/config'
 const identifier = ref('')
 const password = ref('')
 const error = ref(null)
-const isLoading = ref(false) //add a loading state
+const isLoading = ref(false) // Add a loading state
 const router = useRouter()
 
 async function handleLogin() {
@@ -68,27 +68,27 @@ async function handleLogin() {
   try {
     let email = identifier.value
 
-    // 1. 判断用户输入的是邮箱还是用户名
-    //    一个简单的判断方法是检查是否包含 '@' 符号
+    // 1. Determine if user input is email or username
+    //    Simple check: if contains '@' symbol, it's an email
     if (!identifier.value.includes('@')) {
-      // 如果是用户名, 需要去 Firestore 查询对应的邮箱
+      // If it's a username, query Firestore to find corresponding email
       const usersRef = collection(db, "users")
       const q = query(usersRef, where("username", "==", identifier.value))
       const querySnapshot = await getDocs(q)
 
       if (querySnapshot.empty) {
-        throw new Error("auth/user-not-found") // 抛出错误，让 catch 块处理
+        throw new Error("auth/user-not-found") // Throw error for catch block to handle
       }
       
-      // 获取查询到的第一个用户的 email
+      // Get email from the first user document found
       email = querySnapshot.docs[0].data().email
     }
 
-    // 2. 使用邮箱和密码进行 Firebase 登录
+    // 2. Use email and password for Firebase authentication
     const userCredential = await signInWithEmailAndPassword(auth, email, password.value)
     const user = userCredential.user
 
-    // 3. 从 Firestore 获取用户角色信息
+    // 3. Get user role information from Firestore
     const userDocRef = doc(db, "users", user.uid)
     const userDoc = await getDoc(userDocRef)
 
@@ -98,9 +98,9 @@ async function handleLogin() {
 
     const userData = userDoc.data()
 
-    // 4. 根据角色进行重定向
-    // 注意：你不再需要手动设置 localStorage.setItem('isAuthenticated', 'true')
-    // Firebase 会自动管理用户的登录状态
+    // 4. Redirect based on user role
+    // Note: No need to manually set localStorage.setItem('isAuthenticated', 'true')
+    // Firebase automatically manages user authentication state
     if (userData.role === 'admin') {
       router.push('/admin-panel')
     } else if (userData.role === 'elder') {
@@ -108,11 +108,11 @@ async function handleLogin() {
     } else if (userData.role === 'volunteer') {
       router.push('/volunteer-area')
     } else {
-      router.push('/') // 默认跳转
+      router.push('/') // Default redirect
     }
 
   } catch (err) {
-    // 5. 处理 Firebase 返回的错误
+    // 5. Handle Firebase authentication errors
     switch (err.code || err.message) {
       case 'auth/user-not-found':
       case 'auth/invalid-email':
@@ -125,7 +125,7 @@ async function handleLogin() {
         console.error("Firebase login error:", err)
     }
   } finally {
-    isLoading.value = false // 无论成功失败，都结束加载状态
+    isLoading.value = false // End loading state regardless of success or failure
   }
 }
 

@@ -4,6 +4,9 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 
+//For the map function: Here, introduce the CSS of Leaflet
+import "leaflet/dist/leaflet.css";
+
 import PrimeVue from 'primevue/config'
 import Aura from '@primevue/themes/aura'
 

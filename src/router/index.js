@@ -9,6 +9,7 @@ import RecentActivitiesView from '../views/RecentActivitiesView.vue'
 import VolunteerAccountView from '../views/VolunteerAccountView.vue'
 import VolunteerAreaView from '../views/VolunteerAreaView.vue'
 import AdminPanelView from '../views/AdminPanelView.vue'
+import InteractiveMapView from '../views/InteractiveMapView.vue'
 
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -66,6 +67,11 @@ const routes = [
     path: '/admin-panel',
     component: AdminPanelView,
     meta: { requiresAuth: true, role: 'admin' }
+  },
+  {
+    path: '/interactive-map',
+    name: 'InteractiveMap',
+    component: InteractiveMapView,
   }
 
 ]
