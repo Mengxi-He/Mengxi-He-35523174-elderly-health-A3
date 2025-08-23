@@ -122,13 +122,48 @@ const dtOptions = {
   searching: true,
   ordering: true,
   select: { style: 'multi', selector: 'td:first-child' },
-  // Apply row styling based on availability status
+  // Apply row styling based on availability status and add keyboard support
   rowCallback: (row, data) => {
     if (isFull(data) || hasJoined(data) || isConflict(data)) {
       row.classList.add('dt-row-disabled');
     } else {
       row.classList.remove('dt-row-disabled');
+      // Add keyboard support for checkbox cells
+      const checkboxCell = row.cells[0]; // First cell contains the checkbox
+      if (checkboxCell) {
+        checkboxCell.setAttribute('tabindex', '0');
+        checkboxCell.setAttribute('role', 'checkbox');
+        checkboxCell.setAttribute('aria-checked', 'false');
+        checkboxCell.setAttribute('aria-label', `Select ${data.title} for registration`);
+        
+        // Add keyboard event listener
+        checkboxCell.addEventListener('keydown', (event) => {
+          if (event.key === ' ' || event.key === 'Enter') {
+            event.preventDefault();
+            // Simulate click to trigger DataTable selection
+            checkboxCell.click();
+          }
+        });
+      }
     }
+  },
+  // Add selection state management
+  initComplete: function() {
+    const dt = this.api();
+    
+    // Update ARIA states when selection changes
+    dt.on('select.dt deselect.dt', function(e, dt, type, indexes) {
+      if (type === 'row') {
+        indexes.forEach(index => {
+          const row = dt.row(index).node();
+          const checkboxCell = row.cells[0];
+          if (checkboxCell) {
+            const isSelected = row.classList.contains('selected');
+            checkboxCell.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+          }
+        });
+      }
+    });
   }
 };
 
@@ -269,5 +304,18 @@ async function submitRegistrations() {
   content: '';
   margin-top: 0;
   margin-left: 0;
+}
+
+/* Keyboard focus styling for checkbox cells */
+:deep(.select-checkbox:focus) {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+  border-radius: 4px;
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Improve table row focus states */
+:deep(.table tbody tr:focus-within) {
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 </style>

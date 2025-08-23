@@ -1,36 +1,49 @@
 <template>
   <div class="container-fluid mt-4">
-    <h3 class="text-center mb-4">📍 Community Facilities Map</h3>
+    <!-- Skip link for keyboard navigation -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     
-    <!-- User information -->
-    <div class="text-center mb-2 text-muted small">
-      Loaded {{ locations.length }} locations | Showing {{ filteredLocations.length }} markers
-      <span v-if="filteredLocations.length > 0" class="ms-2">
-        💡 Click on map markers for detailed information
-      </span>
-    </div>
-
-    <!-- Search functionality -->
-    <div class="row mb-3">
-      <div class="col-md-6 offset-md-3">
-        <input 
-          type="text" 
-          class="form-control" 
-          placeholder="Search for a facility name or address..."
-          v-model="searchTerm"
-        />
+    <main id="main-content">
+      <h1 class="text-center mb-4"><span aria-hidden="true">📍</span> Community Facilities Map</h1>
+      
+      <!-- User information -->
+      <div class="text-center mb-2 text-muted small" role="status" aria-live="polite">
+        Loaded {{ locations.length }} locations | Showing {{ filteredLocations.length }} markers
+        <span v-if="filteredLocations.length > 0" class="ms-2">
+          <span aria-hidden="true">💡</span> Click on map markers for detailed information
+        </span>
       </div>
-    </div>
 
-    <!-- Map container -->
-    <div style="height: 65vh; width: 100%;">
-      <div v-if="isLoading" class="d-flex justify-content-center align-items-center h-100">
-        <div class="text-center">
-          <div class="spinner-border" role="status"></div>
-          <p class="mt-2">Loading map data...</p>
+      <!-- Search functionality -->
+      <section class="row mb-3" aria-labelledby="search-heading">
+        <h2 id="search-heading" class="visually-hidden">Search Facilities</h2>
+        <div class="col-md-6 offset-md-3">
+          <label for="facility-search" class="visually-hidden">Search for facilities</label>
+          <input 
+            id="facility-search"
+            type="text" 
+            class="form-control" 
+            placeholder="Search for a facility name or address..."
+            v-model="searchTerm"
+            aria-describedby="search-help"
+          />
+          <div id="search-help" class="form-text">Type to filter facilities by name or address</div>
         </div>
-      </div>
-      <l-map v-else ref="map" v-model:zoom="zoom" :center="center">
+      </section>
+
+      <!-- Map container -->
+      <section aria-labelledby="map-heading">
+        <h2 id="map-heading" class="visually-hidden">Interactive Map</h2>
+        <div style="height: 65vh; width: 100%;" role="application" aria-label="Interactive map showing community facilities">
+          <div v-if="isLoading" class="d-flex justify-content-center align-items-center h-100">
+            <div class="text-center">
+              <div class="spinner-border" role="status" aria-label="Loading map data">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <p class="mt-2">Loading map data...</p>
+            </div>
+          </div>
+          <l-map v-else ref="map" v-model:zoom="zoom" :center="center">
         <!-- OpenStreetMap tile layer -->
         <l-tile-layer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -68,8 +81,10 @@
             </l-tooltip>
           </l-marker>
         </template>
-      </l-map>
-    </div>
+          </l-map>
+        </div>
+      </section>
+    </main>
   </div>
 </template>
 
@@ -179,6 +194,40 @@ const filteredLocations = computed(() => {
 </script>
 
 <style scoped>
+/* Skip link for keyboard navigation - WCAG 2.4.1 */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #000;
+  color: #fff;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 1000;
+  border-radius: 4px;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Improve focus visibility for search input - WCAG 2.4.7 */
+#facility-search:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.25);
+}
+
+/* Ensure sufficient color contrast - WCAG 1.4.3 */
+.form-text {
+  color: #6c757d;
+}
+
+/* Map accessibility improvements */
+.leaflet-container {
+  font-family: inherit;
+}
+
 /* Map container styling */
 .l-map {
   height: 100%;

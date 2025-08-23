@@ -139,13 +139,49 @@ const dtOptions = {
     style: 'multi', 
     selector: 'td:first-child' 
   },
-  // Disable row selection for already registered activities
+  // Disable row selection for already registered activities and add keyboard support
   rowCallback: (row, data) => {
     if (isAlreadyRegistered(data)) {
       row.classList.add('dt-row-disabled');
       row.classList.remove('selected');
+    } else {
+      // Add keyboard support for checkbox cells
+      const checkboxCell = row.cells[0]; // First cell contains the checkbox
+      if (checkboxCell) {
+        checkboxCell.setAttribute('tabindex', '0');
+        checkboxCell.setAttribute('role', 'checkbox');
+        checkboxCell.setAttribute('aria-checked', 'false');
+        checkboxCell.setAttribute('aria-label', `Select ${data.title} for registration`);
+        
+        // Add keyboard event listener
+        checkboxCell.addEventListener('keydown', (event) => {
+          if (event.key === ' ' || event.key === 'Enter') {
+            event.preventDefault();
+            // Simulate click to trigger DataTable selection
+            checkboxCell.click();
+          }
+        });
+      }
     }
   },
+  // Add selection state management
+  initComplete: function() {
+    const dt = this.api();
+    
+    // Update ARIA states when selection changes
+    dt.on('select.dt deselect.dt', function(e, dt, type, indexes) {
+      if (type === 'row') {
+        indexes.forEach(index => {
+          const row = dt.row(index).node();
+          const checkboxCell = row.cells[0];
+          if (checkboxCell) {
+            const isSelected = row.classList.contains('selected');
+            checkboxCell.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+          }
+        });
+      }
+    });
+  }
 };
 
 // Load data from Firebase on component mount
@@ -317,6 +353,19 @@ async function registerActivities() {
   margin-left: 0;
 }
 
+/* Keyboard focus styling for checkbox cells */
+:deep(.select-checkbox:focus) {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+  border-radius: 4px;
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* Improve table row focus states */
+:deep(.table tbody tr:focus-within) {
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
 /* Styling for already registered rows */
 :deep(.dt-row-disabled) {
   background-color: #f8f9fa !important;
@@ -328,7 +377,7 @@ async function registerActivities() {
   color: #6c757d !important;
 }
 
-/* 禁用已报名行的复选框点击 */
+/* Click the checkbox to disable the selected bank. */
 :deep(.dt-row-disabled .select-checkbox) {
   pointer-events: none;
   cursor: not-allowed;
